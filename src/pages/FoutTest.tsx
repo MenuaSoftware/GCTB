@@ -24,8 +24,7 @@ const AZ = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const az = "abcdefghijklmnopqrstuvwxyz";
 const DIG = "0123456789";
 const ALPHA = AZ + az;
-const ALNUM = ALPHA + DIG;
-const HEX = "0123456789abcdef";
+
 const TLD = ["com", "net", "org", "be", "nl", "de", "fr", "eu"];
 const DOMAINS = ["mail", "app", "news", "portal", "secure", "office", "intra"];
 
@@ -90,7 +89,8 @@ function makeAddress(r: () => number) {
 }
 
 /* choose one producer */
-const PRODUCERS = [makeEmail, makeUrl, makePlate, makeCode, makeAddress] as const;
+type Producer = (r: () => number) => string;
+const PRODUCERS: Producer[] = [makeEmail, makeUrl, makePlate, makeCode, makeAddress];
 
 /* ---------- mutate exactly k positions, preserving char class ---------- */
 function mutateK(r: () => number, s: string, k: number) {
@@ -141,7 +141,7 @@ type Item = { a: string; b: string; correct: 0|1|2|3|4 };
 
 function genItem(seed: number): Item {
   const r = mulberry32(seed);
-  const prod = pick(r, PRODUCERS);
+  const prod = pick<Producer>(r, PRODUCERS);
   const base = prod(r);
 
   // verdeling van 0..4 verschillen, iets vaker 1–3
