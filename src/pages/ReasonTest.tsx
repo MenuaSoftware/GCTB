@@ -162,7 +162,14 @@ export default function ReasonTest() {
   const items = useMemo(() => Array.from({ length: 12 }, (_, i) => makeItem(seed + i)), [seed]);
   const it = items[idx];
 
-  useEffect(() => () => timer.current && clearTimeout(timer.current), []);
+  useEffect(() => {
+  return () => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+    }
+  };
+}, []);
+
 
   function start() {
     setSeed(Date.now());
