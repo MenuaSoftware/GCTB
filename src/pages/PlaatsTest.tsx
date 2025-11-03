@@ -18,7 +18,6 @@ const DIR_LABEL: Record<Dir, string> = {
 };
 const COLOR_LABEL: Record<Color, string> = { b: "ZWART", w: "WIT" };
 
-// RNG helpers
 function mulberry32(a: number) {
   return function () {
     let t = (a += 0x6d2b79f5);
@@ -36,31 +35,20 @@ const shuffle = <T,>(rng: () => number, a: T[]) => {
   return a;
 };
 
-// ------------------------------------------------------------------
-// Generator met balans + moeilijkere afleiders
-// ------------------------------------------------------------------
 function genItem(seed: number) {
   const r = mulberry32(seed);
   const colors: Color[] = ["b", "w"];
   const dirs: Dir[] = ["left_up", "left_down", "right_up", "right_down"];
 
-  // 90% kans op verschillende kleuren
   const diffColor = r() < 0.9;
   const topColor: Color = pick(r, colors);
   const botColor: Color = diffColor ? (topColor === "b" ? "w" : "b") : topColor;
-
   const topDir: Dir = pick(r, dirs);
   const botDir: Dir = pick(r, dirs);
 
-  const correct: Tile = {
-    top: { color: topColor, dir: topDir },
-    bottom: { color: botColor, dir: botDir },
-  };
-
-  // 50% kans op omgekeerde tekstvolgorde
+  const correct: Tile = { top: { color: topColor, dir: topDir }, bottom: { color: botColor, dir: botDir } };
   const swappedOrder = r() < 0.5;
 
-  // Afleiders die lijken op correcte oplossing
   const tiles: Tile[] = [correct];
   const used = new Set<string>();
   used.add(`${topColor}-${botColor}-${topDir}-${botDir}`);
@@ -99,16 +87,9 @@ function genItem(seed: number) {
       t.bottom.dir === correct.bottom.dir
   );
 
-  return {
-    rules: { topColor, botColor, topDir, botDir, swappedOrder },
-    tiles,
-    answer,
-  };
+  return { rules: { topColor, botColor, topDir, botDir, swappedOrder }, tiles, answer };
 }
 
-// ------------------------------------------------------------------
-// Component
-// ------------------------------------------------------------------
 export default function PlaatsTest() {
   const [phase, setPhase] = useState<"intro" | "rules" | "choice" | "done">("intro");
   const [seed, setSeed] = useState(Date.now());
@@ -120,7 +101,14 @@ export default function PlaatsTest() {
   const items = useMemo(() => Array.from({ length: 12 }, (_, i) => genItem(seed + i)), [seed]);
   const it = items[idx];
 
-  useEffect(() => () => timer.current && clearTimeout(timer.current), []);
+useEffect(() => {
+  return () => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+    }
+  };
+}, []);
+
 
   function start() {
     setSeed(Date.now());
@@ -162,7 +150,6 @@ export default function PlaatsTest() {
     </Button>
   );
 
-  // Shell-layout — identiek aan Runner
   const Shell = (children: React.ReactNode) => (
     <div className="min-h-screen grid place-items-center p-6 bg-neutral-50 dark:bg-neutral-950">
       <div className="w-full max-w-3xl text-white relative">
@@ -172,7 +159,6 @@ export default function PlaatsTest() {
     </div>
   );
 
-  // ------------------------ Fases ------------------------
   if (phase === "intro") {
     return Shell(
       <div className="space-y-4">
@@ -228,66 +214,77 @@ export default function PlaatsTest() {
 
   if (phase === "rules") {
     return Shell(
-      <div className="relative h-56 rounded-2xl border bg-neutral-900 grid place-items-center overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
-          <div
-            key={"rules-" + idx}
-            className="h-full bg-green-500 animate-barfill"
-            style={{ animationDuration: `${VIEW_MS}ms` }}
-          />
+      <>
+        <div className="relative h-56 rounded-2xl border bg-neutral-900 grid place-items-center overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
+            <div
+              key={"rules-" + idx}
+              className="h-full bg-green-500 animate-barfill"
+              style={{ animationDuration: `${VIEW_MS}ms` }}
+            />
+          </div>
+
+          <div className="grid place-items-center gap-3">
+            {it.rules.swappedOrder ? (
+              <>
+                <div className="text-2xl font-mono">
+                  {DIR_LABEL[it.rules.topDir]} BOVEN {DIR_LABEL[it.rules.botDir]}
+                </div>
+                <div className="text-2xl font-mono">
+                  {COLOR_LABEL[it.rules.topColor]} BOVEN {COLOR_LABEL[it.rules.botColor]}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-mono">
+                  {COLOR_LABEL[it.rules.topColor]} BOVEN {COLOR_LABEL[it.rules.botColor]}
+                </div>
+                <div className="text-2xl font-mono">
+                  {DIR_LABEL[it.rules.topDir]} BOVEN {DIR_LABEL[it.rules.botDir]}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
-        <div className="grid place-items-center gap-3">
-          {it.rules.swappedOrder ? (
-            <>
-              <div className="text-2xl font-mono">
-                {DIR_LABEL[it.rules.topDir]} BOVEN {DIR_LABEL[it.rules.botDir]}
-              </div>
-              <div className="text-2xl font-mono">
-                {COLOR_LABEL[it.rules.topColor]} BOVEN {COLOR_LABEL[it.rules.botColor]}
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="text-2xl font-mono">
-                {COLOR_LABEL[it.rules.topColor]} BOVEN {COLOR_LABEL[it.rules.botColor]}
-              </div>
-              <div className="text-2xl font-mono">
-                {DIR_LABEL[it.rules.topDir]} BOVEN {DIR_LABEL[it.rules.botDir]}
-              </div>
-            </>
-          )}
+        <div className="mt-2 text-right text-sm text-neutral-400">
+          {idx + 1}/{items.length}
         </div>
-      </div>
+      </>
     );
   }
 
-  // Choice-phase
   return Shell(
-    <div className="relative rounded-2xl border bg-neutral-900 overflow-hidden p-6">
-      <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
-        <div
-          key={"choice-" + idx}
-          className="h-full bg-green-500 animate-barfill"
-          style={{ animationDuration: `${CHOICE_MS}ms` }}
-        />
+    <>
+      <div className="relative rounded-2xl border bg-neutral-900 overflow-hidden p-6">
+        <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
+          <div
+            key={"choice-" + idx}
+            className="h-full bg-green-500 animate-barfill"
+            style={{ animationDuration: `${CHOICE_MS}ms` }}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          {it.tiles.map((t, i) => (
+            <button
+              key={i}
+              onClick={() => pickTile(i)}
+              className="rounded-xl border border-neutral-700 hover:border-neutral-400 p-3 bg-white"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <ArrowImg color={t.top.color} dir={t.top.dir} />
+                <ArrowImg color={t.bottom.color} dir={t.bottom.dir} />
+              </div>
+              <div className="mt-2 text-[10px] text-neutral-600 text-center">Optie {i + 1}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        {it.tiles.map((t, i) => (
-          <button
-            key={i}
-            onClick={() => pickTile(i)}
-            className="rounded-xl border border-neutral-700 hover:border-neutral-400 p-3 bg-white"
-          >
-            <div className="flex flex-col items-center gap-2">
-              <ArrowImg color={t.top.color} dir={t.top.dir} />
-              <ArrowImg color={t.bottom.color} dir={t.bottom.dir} />
-            </div>
-            <div className="mt-2 text-[10px] text-neutral-600 text-center">Optie {i + 1}</div>
-          </button>
-        ))}
+      <div className="mt-2 text-right text-sm text-neutral-400">
+        {idx + 1}/{items.length}
       </div>
-    </div>
+    </>
   );
 }

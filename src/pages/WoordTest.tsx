@@ -75,7 +75,14 @@ export default function WoordTest() {
   const items = useMemo(() => Array.from({ length: 12 }, (_, i) => genItem(seed + i)), [seed]);
   const it = items[idx];
 
-  useEffect(() => () => timer.current && clearTimeout(timer.current), []);
+useEffect(() => {
+  return () => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+    }
+  };
+}, []);
+
 
   function start() {
     setSeed(Date.now());
@@ -133,9 +140,7 @@ export default function WoordTest() {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (phase !== "choice") return;
-      if (e.key === "0" || e.key === "1" || e.key === "2" || e.key === "3") {
-        choose(parseInt(e.key, 10));
-      }
+      if (["0", "1", "2", "3"].includes(e.key)) choose(parseInt(e.key, 10));
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -190,44 +195,62 @@ export default function WoordTest() {
 
   if (phase === "rules") {
     return Shell(
-      <div className="relative h-56 rounded-2xl border bg-neutral-900 grid place-items-center overflow-hidden">
-        <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
-          <div
-            key={"rules-" + idx}
-            className="h-full bg-green-500 animate-barfill"
-            style={{ animationDuration: `${VIEW_MS}ms` }}
-          />
+      <>
+        <div className="relative h-56 rounded-2xl border bg-neutral-900 grid place-items-center overflow-hidden">
+          <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
+            <div
+              key={"rules-" + idx}
+              className="h-full bg-green-500 animate-barfill"
+              style={{ animationDuration: `${VIEW_MS}ms` }}
+            />
+          </div>
+          <div className="grid gap-2 place-items-center">
+            <div className="text-sm uppercase tracking-wide text-neutral-400">REGELS</div>
+            <div className="text-2xl font-mono">
+              {it.rules[0]} • {it.rules[1]} • {it.rules[2]}
+            </div>
+            <div className="text-xs text-neutral-400">Onthoud de volgorde</div>
+          </div>
         </div>
-        <div className="grid gap-2 place-items-center">
-          <div className="text-sm uppercase tracking-wide text-neutral-400">REGELS</div>
-          <div className="text-2xl font-mono">{it.rules[0]} • {it.rules[1]} • {it.rules[2]}</div>
-          <div className="text-xs text-neutral-400">Onthoud de volgorde</div>
+
+        <div className="mt-2 text-right text-sm text-neutral-400">
+          {idx + 1}/{items.length}
         </div>
-      </div>
+      </>
     );
   }
 
   return Shell(
-    <div className="relative rounded-2xl border bg-neutral-900 overflow-hidden p-6">
-      <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
-        <div
-          key={"choice-" + idx}
-          className="h-full bg-green-500 animate-barfill"
-          style={{ animationDuration: `${CHOICE_MS}ms` }}
-        />
-      </div>
-      <div className="space-y-6">
-        <div className="grid gap-2 place-items-center">
-          <div className="text-sm uppercase tracking-wide text-neutral-400">WOORDEN</div>
-          <div className="text-2xl font-mono">{it.words[0]} • {it.words[1]} • {it.words[2]}</div>
+    <>
+      <div className="relative rounded-2xl border bg-neutral-900 overflow-hidden p-6">
+        <div className="absolute bottom-0 left-0 w-full h-1 overflow-hidden">
+          <div
+            key={"choice-" + idx}
+            className="h-full bg-green-500 animate-barfill"
+            style={{ animationDuration: `${CHOICE_MS}ms` }}
+          />
         </div>
-        <div className="grid grid-cols-4 gap-3">
-          {[0,1,2,3].map(n => (
-            <Button key={n} onClick={() => choose(n)} className="w-full">[{n}]</Button>
-          ))}
+        <div className="space-y-6">
+          <div className="grid gap-2 place-items-center">
+            <div className="text-sm uppercase tracking-wide text-neutral-400">WOORDEN</div>
+            <div className="text-2xl font-mono">
+              {it.words[0]} • {it.words[1]} • {it.words[2]}
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-3">
+            {[0, 1, 2, 3].map((n) => (
+              <Button key={n} onClick={() => choose(n)} className="w-full">
+                [{n}]
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-neutral-400 text-center">Toetsenbord: 0 / 1 / 2 / 3</p>
         </div>
-        <p className="text-xs text-neutral-400 text-center">Toetsenbord: 0 / 1 / 2 / 3</p>
       </div>
-    </div>
+
+      <div className="mt-2 text-right text-sm text-neutral-400">
+        {idx + 1}/{items.length}
+      </div>
+    </>
   );
 }
